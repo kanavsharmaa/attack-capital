@@ -14,6 +14,21 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+enum CallStrategy {
+  TWILIO_NATIVE
+  JAMBONZ
+  HUGGING_FACE
+  GEMINI
+}
+
+enum CallStatus {
+  PENDING
+  HUMAN
+  MACHINE
+  NO_ANSWER
+  ERROR
+}
+
 model User {
   id            String    @id
   name          String
@@ -24,6 +39,8 @@ model User {
   updatedAt     DateTime  @default(now()) @updatedAt
   sessions      Session[]
   accounts      Account[]
+
+  callLogs      CallLog[] // This user can have many call logs
 
   @@unique([email])
   @@map("user")
@@ -72,4 +89,24 @@ model Verification {
   updatedAt  DateTime @default(now()) @updatedAt
 
   @@map("verification")
+}
+
+model CallLog {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // --- User Inputs ---
+  targetNumber String       // The number that was dialed
+  strategyUsed CallStrategy // The AMD strategy selected from the dropdown
+
+  // --- Call Lifecycle ---
+  status        CallStatus @default(PENDING) // The current status
+  twilioCallSid String     @unique          // The unique ID from Twilio
+
+  // --- Relationship ---
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("call_log")
 }
