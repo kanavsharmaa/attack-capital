@@ -1,9 +1,19 @@
 "use client";
 
+import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function Home() {
   const router = useRouter();
+  const { data: session, isPending } = useSession();
+
+  // Authentication & Redirect
+  useEffect(() => {
+    if (!isPending && session?.user) {
+      router.push("/dashboard");
+    }
+  }, [isPending, session, router]);
 
   return (
     <main className="flex items-center justify-center h-screen bg-neutral-950 text-white">
