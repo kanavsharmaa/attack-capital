@@ -9,21 +9,20 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
-  const amdStatus = formData.get("AnsweredBy"); // 'human', 'machine', or null/undefined if detection timed out or failed
+  const answeredBy = formData.get("AnsweredBy"); // 'human', 'machine', or null/undefined if detection timed out or failed
   const callSid = formData.get("CallSid") as string; // Twilio always provides CallSid
 
-  console.log(`INITIAL-TWIML (Sync): AMD status is: ${amdStatus}`);
+  console.log(`INITIAL-TWIML (Sync): AMD status is: ${answeredBy}`);
 
   const response = new twiml.VoiceResponse();
 
   let newStatus: CallStatus | undefined;
 
-  if (amdStatus === "human") {
+  if (answeredBy === "human") {
     newStatus = CallStatus.HUMAN; //
     // AMD is complete. The human is waiting.
     response.say("Hello, a human has answered. Connecting you.");
-    response.pause({ length: 15 }); // Or <Dial>
-  } else if (amdStatus === "machine") {
+  } else if (answeredBy === "machine_start") {
     newStatus = CallStatus.MACHINE; //
     console.log("Machine answered. Hanging up.");
     response.hangup();
@@ -31,10 +30,12 @@ export async function POST(req: NextRequest) {
     // This includes 'fax', 'sip', 'unknown', null/undefined (timeout/failure)
     // We'll treat unexpected or failed AMD as a non-human answer and hang up.
     newStatus = CallStatus.NO_ANSWER; //
-    console.log(`AMD failed, timed out, or not human/machine. Hanging up. AMD status: ${amdStatus}`);
+    console.log(`AMD failed, timed out, or not human/machine. Hanging up. AMD status: ${answeredBy}`);
     response.hangup();
   }
 
+  console.log("AMD Status: ", answeredBy);
+  console.log("new Status: ", newStatus);
   // Save the AMD status to the database
   if (callSid && newStatus) {
     try {

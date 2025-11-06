@@ -32,15 +32,18 @@ export async function POST(req: NextRequest) {
       case 'no-answer':
       case 'busy':
       case 'canceled':
-        newStatus = CallStatus.NO_ANSWER; //
+        newStatus = CallStatus.NO_ANSWER;
         break;
       case 'failed':
       case 'undelivered':
-        newStatus = CallStatus.ERROR; //
+      case 'error':
+        newStatus = CallStatus.ERROR;
+        break;
+      case 'completed':
+        // If user picks up the call and then cuts it
+        newStatus = CallStatus.NO_ANSWER;
         break;
       default:
-        // Ignore statuses like 'ringing', 'in-progress', 'completed' (which are often
-        // a result of the TwiML in initial-twiml), or other intermediate statuses.
         return new Response(null, { status: 204 });
     }
     
