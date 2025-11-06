@@ -8,18 +8,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PhoneOff, Speaker, User } from "lucide-react";
+import { PhoneOff, Speaker, User, Loader2 } from "lucide-react";
 
 interface LiveCallUIProps {
   targetNumber: string;
   strategyUsed: string;
   handleHangup: () => void;
+  isHangingUp: boolean;
 }
 
 export function LiveCallUI({
   targetNumber,
   strategyUsed,
   handleHangup,
+  isHangingUp,
 }: LiveCallUIProps) {
   return (
     <Card className="bg-green-800 border-green-700 text-white shadow-xl shadow-green-900/50 h-full">
@@ -49,25 +51,16 @@ export function LiveCallUI({
             size="lg"
             className="bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/50 transform transition-transform hover:scale-105"
             onClick={handleHangup}
+            disabled={isHangingUp}
           >
-            <PhoneOff className="mr-2 h-5 w-5" />
-            Hang Up
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="lg"
-            className="bg-neutral-700 border-neutral-600 hover:bg-neutral-600/70 text-white"
-          >
-            <Speaker className="mr-2 h-5 w-5" />
-            Mute/Unmute
+            {isHangingUp ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <PhoneOff className="mr-2 h-5 w-5" />
+            )}
+            {isHangingUp ? "Hanging up..." : "Hang Up"}
           </Button>
         </div>
-        
-        {/* Placeholder for future features */}
-        <p className="text-xs text-green-300 pt-4">
-          *Future development: Live transcript, CRM logging, Note taking.
-        </p>
       </CardContent>
     </Card>
   );

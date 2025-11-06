@@ -38,6 +38,7 @@ interface CallState {
   message: string;
   targetNumber: string;
   strategyUsed: Exclude<CallStrategy, "ALL">;
+  callSid: string | null;
 }
 
 const INITIAL_CALL_STATE: CallState = {
@@ -45,6 +46,7 @@ const INITIAL_CALL_STATE: CallState = {
   message: "Ready to initiate a new call.",
   targetNumber: "",
   strategyUsed: AMD_STRATEGIES[0],
+  callSid: null,
 };
 
 export default function DashboardPage() {
@@ -57,6 +59,7 @@ export default function DashboardPage() {
   const [filterStrategy, setFilterStrategy] = useState<CallStrategy>("ALL");
   const [filterStatus, setFilterStatus] = useState<CallStatus>("ALL");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isHangingUp, setIsHangingUp] = useState(false);
 
   // SSE ref
   const esRef = useRef<EventSource | null>(null);
@@ -236,6 +239,7 @@ export default function DashboardPage() {
         message: `Dialing ${to} using ${strategy}...`,
         targetNumber: to,
         strategyUsed: strategy,
+        callSid: null,
       });
 
       try {
@@ -264,6 +268,7 @@ export default function DashboardPage() {
           message: `Call initiated (SID: ${callSid})`,
           targetNumber: to,
           strategyUsed: strategy,
+          callSid: callSid,
         });
 
         // Open the live stream for this call
@@ -294,6 +299,7 @@ export default function DashboardPage() {
             err instanceof Error ? err.message : "Failed to initiate call.",
           targetNumber: "",
           strategyUsed: AMD_STRATEGIES[0],
+          callSid: null,
         });
       }
     },
@@ -301,13 +307,37 @@ export default function DashboardPage() {
   );
 
   // Handle hanging up the call (local UI reset)
-  const handleHangup = useCallback(() => {
+  const handleHangup = useCallback(async () => {
+    setIsHangingUp(true); // Set loading state
+
+    const { callSid } = currentCallState;
+
+    if (callSid) {
+      try {
+        // Call our new API endpoint
+        await fetch("/api/twilio/hangup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ callSid }),
+        });
+        // Note: We don't care about the response. We'll just reset the UI.
+        // The status-callback webhook will handle the DB update.
+      } catch (err) {
+        console.error("Failed to send hangup request:", err);
+        // Still reset UI even if API call fails
+      }
+    }
+
+    // Close the event stream
     if (esRef.current) {
       esRef.current.close();
       esRef.current = null;
     }
+
+    // Reset the UI
     setCurrentCallState(INITIAL_CALL_STATE);
-  }, []);
+    setIsHangingUp(false); // Unset loading state
+  }, [currentCallState]); // Add currentCallState as dependency
 
   // Loading state
   if (isPending) {
@@ -356,6 +386,7 @@ export default function DashboardPage() {
               targetNumber={currentCallState.targetNumber}
               strategyUsed={currentCallState.strategyUsed}
               handleHangup={handleHangup}
+              isHangingUp={isHangingUp}
             />
           ) : (
             <Dialer
